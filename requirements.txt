@@ -22,4 +22,5 @@ streamlit # basic frontend library
 
 # for voice recognition
 librosa # studio for voice 
-resemblyzer # embedding for voice opencv-python-headless
+resemblyzer # embedding for voice 
+opencv-python-headless
