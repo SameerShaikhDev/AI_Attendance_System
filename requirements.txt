@@ -1,0 +1,25 @@
+# Utilities
+numpy
+pandas
+
+
+# for face
+scikit-learn     # face recognition
+dlib-bin  # face recognition 
+
+# ageitgey face recognition repo
+git+https://github.com/ageitgey/face_recognition_models
+setuptools<70.0.0
+
+# Database
+supabase
+bcrypt
+
+segno  # qr for any url
+pillow  # iamges preprocessign 
+
+streamlit # basic frontend library 
+
+# for voice recognition
+librosa # studio for voice 
+resemblyzer # embedding for voice 
