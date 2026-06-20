@@ -26,3 +26,4 @@ resemblyzer # embedding for voice
 opencv-python-headless
 onnxruntime
 insightface
+EOF
