@@ -24,3 +24,5 @@ streamlit # basic frontend library
 librosa # studio for voice 
 resemblyzer # embedding for voice 
 opencv-python-headless
+onnxruntime
+insightface
