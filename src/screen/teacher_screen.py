@@ -404,7 +404,7 @@ def attendance_page():
 
     uploaded_files = st.file_uploader(
         "Class ki photos yahan daalo",
-        type=["jpg", "jpeg", "png", "webp", "heic", "heif"],
+        type=None,   # koi bhi file type accept karo — mobile ka photo picker "type" filter ke saath silently fail ho raha tha
         accept_multiple_files=True,
         key="att_file_uploader",
     )
