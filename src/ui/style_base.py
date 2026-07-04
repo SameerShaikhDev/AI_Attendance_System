@@ -9,6 +9,7 @@ html, body, .stApp {
     font-family: 'Nunito', sans-serif !important;
     background: #1a2a1a !important;
     color: #f0e6d0 !important;
+    color-scheme: dark !important;
 }
 
 #MainMenu, header, footer { visibility: hidden !important; }
@@ -57,27 +58,55 @@ p, span, label,
 
 .stTextInput input,
 .stSelectbox select,
-.stTextArea textarea {
-    background: rgba(240,230,208,0.08) !important;
+.stTextArea textarea,
+.stNumberInput input,
+[data-baseweb="input"] input,
+[data-baseweb="textarea"] textarea,
+[data-baseweb="base-input"] input {
+    background: #23392a !important;
     border: 2px solid rgba(240,230,208,0.2) !important;
     border-radius: 10px !important;
     color: #f0e6d0 !important;
+    -webkit-text-fill-color: #f0e6d0 !important;
+    caret-color: #f0e6d0 !important;
     font-family: 'Nunito', sans-serif !important;
     font-size: 0.95rem !important;
     padding: 10px 14px !important;
     transition: border-color 0.2s !important;
 }
 
+/* wrapper divs — some Streamlit versions colour the wrapper, not just the input */
+[data-baseweb="input"],
+[data-baseweb="textarea"],
+[data-baseweb="base-input"] {
+    background: #23392a !important;
+}
+
 .stTextInput input:focus,
-.stTextArea textarea:focus {
+.stTextArea textarea:focus,
+.stNumberInput input:focus {
     border-color: #8fbc8f !important;
     box-shadow: 0 0 0 3px rgba(143,188,143,0.2) !important;
     outline: none !important;
 }
 
 .stTextInput input::placeholder,
-.stTextArea textarea::placeholder {
-    color: rgba(240,230,208,0.3) !important;
+.stTextArea textarea::placeholder,
+.stNumberInput input::placeholder {
+    color: rgba(240,230,208,0.45) !important;
+    -webkit-text-fill-color: rgba(240,230,208,0.45) !important;
+}
+
+/* Autofill (Chrome/Safari) forces its own white bg + text colour — override it */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+    -webkit-text-fill-color: #f0e6d0 !important;
+    -webkit-box-shadow: 0 0 0px 1000px #23392a inset !important;
+    box-shadow: 0 0 0px 1000px #23392a inset !important;
+    caret-color: #f0e6d0 !important;
+    transition: background-color 9999s ease-in-out 0s;
 }
 
 /* ══ BUTTONS ══ */

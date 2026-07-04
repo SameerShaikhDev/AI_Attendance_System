@@ -412,7 +412,7 @@ def attendance_page():
                 st.image(img_arr, caption=name, width=120)
 
         st.write("")
-        if st.button("🚀 Attendance Lagao", type="primary", use_container_width=True):
+        if st.button("🔍 Photos Scan Karo", type="primary", use_container_width=True):
             present_ids = set()
             total_faces = 0
             per_image_log = []
@@ -432,13 +432,8 @@ def attendance_page():
 
             progress.empty()
 
-            try:
-                save_attendance(selected_subject_id, {sid: True for sid in present_ids}, all_student_ids)
-                st.toast(f"✅ Attendance saved! Lecture #{lecture_number} - {selected_subject['name']}")
-            except Exception as e:
-                st.warning(f"Save nahi hua: {e}")
-
-            st.session_state['att_results'] = {
+            # Sirf preview -- abhi DB mein save NAHI hua. Confirm dabane ke baad hi save hoga.
+            st.session_state['att_preview'] = {
                 'present_ids': list(present_ids),
                 'all_students': enrolled_students,
                 'student_map': student_map,
@@ -446,10 +441,71 @@ def attendance_page():
                 'per_image_log': per_image_log,
                 'subject_name': selected_subject['name'],
                 'lecture_number': lecture_number,
+                'subject_id': selected_subject_id,
+                'all_student_ids': all_student_ids,
             }
+            st.session_state.pop('att_results', None)
             st.rerun()
 
-    # ── Results ──
+    # ── Preview + Confirmation (kuch bhi save nahi hota jab tak Confirm na dabao) ──
+    if 'att_preview' in st.session_state:
+        prev = st.session_state['att_preview']
+        preview_present_ids = set(prev['present_ids'])
+        students = prev['all_students']
+        smap = prev['student_map']
+
+        st.divider()
+        st.markdown(f"### 👀 Preview — {prev.get('subject_name','')} | Lecture #{prev.get('lecture_number','')}")
+        st.warning("⚠️ Yeh sirf preview hai, abhi tak kuch save nahi hua. Agar kisi ka face detect nahi hua (photo angle/lighting ki wajah se), to neeche manually tick kar do. Sab check karne ke baad Confirm dabao — tabhi attendance database mein lagegi.")
+
+        with st.expander("📁 Per-image breakdown", expanded=False):
+            for log in prev['per_image_log']:
+                err = log.get('error')
+                if err:
+                    st.error(f"**{log['name']}** — Error: {err}")
+                else:
+                    names = [smap.get(i, f"#{i}") for i in log['detected']]
+                    st.write(f"**{log['name']}** — {log['faces']} face(s) → {', '.join(names) if names else 'No match'}")
+
+        st.markdown("#### ✏️ Attendance verify/edit karo")
+        final_present = {}
+        for s in students:
+            sid = s['student_id']
+            default_checked = sid in preview_present_ids
+            final_present[sid] = st.checkbox(
+                f"{s['name']}" + ("  ✅ (AI ne detect kiya)" if default_checked else "  — (AI ko nahi mila)"),
+                value=default_checked,
+                key=f"chk_preview_{sid}"
+            )
+
+        st.write("")
+        cbtn1, cbtn2 = st.columns(2, gap="small")
+        with cbtn1:
+            if st.button("✅ Confirm & Attendance Lagao", type="primary", use_container_width=True):
+                present_dict = {sid: True for sid, checked in final_present.items() if checked}
+                try:
+                    save_attendance(prev['subject_id'], present_dict, prev['all_student_ids'])
+                    st.toast(f"✅ Attendance saved! Lecture #{prev['lecture_number']} - {prev['subject_name']}")
+                except Exception as e:
+                    st.warning(f"Save nahi hua: {e}")
+
+                st.session_state['att_results'] = {
+                    'present_ids': list(present_dict.keys()),
+                    'all_students': students,
+                    'student_map': smap,
+                    'total_faces': prev['total_faces'],
+                    'per_image_log': prev['per_image_log'],
+                    'subject_name': prev['subject_name'],
+                    'lecture_number': prev['lecture_number'],
+                }
+                st.session_state.pop('att_preview', None)
+                st.rerun()
+        with cbtn2:
+            if st.button("🔄 Cancel / Dobara Photo Lo", type="secondary", use_container_width=True):
+                st.session_state.pop('att_preview', None)
+                st.rerun()
+
+    # ── Results (final, saved) ──
     if 'att_results' in st.session_state:
         res = st.session_state['att_results']
         present_ids = set(res['present_ids'])
