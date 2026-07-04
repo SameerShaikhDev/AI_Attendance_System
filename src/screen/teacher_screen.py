@@ -528,11 +528,14 @@ def attendance_page():
         with cbtn1:
             if st.button("✅ Confirm & Attendance Lagao", type="primary", use_container_width=True):
                 present_dict = {sid: True for sid, checked in final_present.items() if checked}
+                save_ok = True
+                save_error_msg = ""
                 try:
                     save_attendance(prev['subject_id'], present_dict, prev['all_student_ids'])
                     st.toast(f"✅ Attendance saved! Lecture #{prev['lecture_number']} - {prev['subject_name']}")
                 except Exception as e:
-                    st.warning(f"Save nahi hua: {e}")
+                    save_ok = False
+                    save_error_msg = str(e)
 
                 st.session_state['att_results'] = {
                     'present_ids': list(present_dict.keys()),
@@ -542,6 +545,8 @@ def attendance_page():
                     'per_image_log': prev['per_image_log'],
                     'subject_name': prev['subject_name'],
                     'lecture_number': prev['lecture_number'],
+                    'save_ok': save_ok,
+                    'save_error_msg': save_error_msg,
                 }
                 st.session_state.pop('att_preview', None)
                 st.session_state.pop('att_images_cache', None)
@@ -568,6 +573,12 @@ def attendance_page():
         pct = int((present_count / total_count) * 100) if total_count else 0
 
         st.divider()
+
+        if res.get('save_ok', True):
+            st.success(f"✅ Attendance successfully saved to database — {res.get('subject_name','')}, Lecture #{res.get('lecture_number','')}")
+        else:
+            st.error(f"❌ Attendance save FAILED: {res.get('save_error_msg','Unknown error')}. Please try Confirm again.")
+
         st.markdown(f"### 📊 Result — {res.get('subject_name','')} | Lecture #{res.get('lecture_number','')}")
 
         st.markdown(f"""
@@ -612,7 +623,7 @@ def attendance_page():
                     names = [smap.get(i, f"#{i}") for i in log['detected']]
                     st.write(f"**{log['name']}** — {log['faces']} face(s) → {', '.join(names) if names else 'No match'}")
 
-        if st.button("🔄 Dobara Lo", type="secondary"):
+        if st.button("📸 Naye Lecture Ke Liye Attendance Lo", type="secondary"):
             st.session_state.pop('att_results', None)
             st.rerun()
 
