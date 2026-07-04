@@ -3,6 +3,15 @@ import time
 import numpy as np
 from PIL import Image
 
+# Mobile phones (iPhone by default, many new Android phones) save photos as
+# HEIC/HEIF, not JPG. Without this, PIL can't open those files at all —
+# that's why photo upload silently fails/doesn't show on mobile but works on laptop.
+try:
+    from pillow_heif import register_heif_opener
+    register_heif_opener()
+except ImportError:
+    pass
+
 from src.ui.style_base import style_home, style_page, style_ui
 from src.components.header import header_dashbaord
 from src.database.db import check_techer_exist, create_teacher, teacher_login, get_all_students
@@ -395,7 +404,7 @@ def attendance_page():
 
     uploaded_files = st.file_uploader(
         "Class ki photos yahan daalo",
-        type=["jpg", "jpeg", "png", "webp"],
+        type=["jpg", "jpeg", "png", "webp", "heic", "heif"],
         accept_multiple_files=True,
         key="att_file_uploader",
     )
@@ -406,18 +415,29 @@ def attendance_page():
         camera_photo = st.camera_input("Class photo lo", key="att_camera_input")
 
     # naye files ko cache mein daalo (dedup: file_id/name+size se, taaki dobara add na ho)
+    upload_errors = []
     if uploaded_files:
         for f in uploaded_files:
             dedup_key = f"upload_{f.name}_{f.size}"
             if dedup_key not in st.session_state['att_seen_keys']:
                 st.session_state['att_seen_keys'].add(dedup_key)
-                st.session_state['att_images_cache'].append(('upload', f.name, np.array(Image.open(f).convert("RGB"))))
+                try:
+                    st.session_state['att_images_cache'].append(('upload', f.name, np.array(Image.open(f).convert("RGB"))))
+                except Exception as e:
+                    upload_errors.append((f.name, str(e)))
     if camera_photo:
         dedup_key = f"camera_{camera_photo.file_id if hasattr(camera_photo, 'file_id') else len(camera_photo.getvalue())}"
         if dedup_key not in st.session_state['att_seen_keys']:
             st.session_state['att_seen_keys'].add(dedup_key)
             cam_name = f"Camera Photo {len([n for (_, n, _) in st.session_state['att_images_cache'] if n.startswith('Camera Photo')]) + 1}"
-            st.session_state['att_images_cache'].append(('camera', cam_name, np.array(Image.open(camera_photo).convert("RGB"))))
+            try:
+                st.session_state['att_images_cache'].append(('camera', cam_name, np.array(Image.open(camera_photo).convert("RGB"))))
+            except Exception as e:
+                upload_errors.append((cam_name, str(e)))
+
+    if upload_errors:
+        for name, err in upload_errors:
+            st.error(f"⚠️ **{name}** open nahi hui — file format support nahi hai ya corrupt hai. ({err})")
 
     images_to_process = st.session_state['att_images_cache']
 
@@ -431,9 +451,9 @@ def attendance_page():
                 st.session_state['att_seen_keys'] = set()
                 st.rerun()
 
-        thumb_cols = st.columns(min(len(images_to_process), 5))
+        thumb_cols = st.columns(min(len(images_to_process), 3))
         for i, (_, name, img_arr) in enumerate(images_to_process):
-            with thumb_cols[i % 5]:
+            with thumb_cols[i % 3]:
                 st.image(img_arr, caption=name, width=120)
 
         st.write("")
