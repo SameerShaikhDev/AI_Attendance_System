@@ -330,6 +330,9 @@ def attendance_page():
     if st.button("← Back to Dashboard", type="secondary"):
         st.session_state['teacher_page'] = 'home'
         st.session_state.pop('att_results', None)
+        st.session_state.pop('att_preview', None)
+        st.session_state.pop('att_images_cache', None)
+        st.session_state.pop('att_seen_keys', None)
         st.rerun()
 
     st.markdown("## 📋 Take Attendance")
@@ -384,27 +387,49 @@ def attendance_page():
     st.markdown("### 📸 Class Photos Upload Karo")
     st.caption("Ek ya zyada photos upload karo — jitne angle se leni ho")
 
+    # cache jisme selected photos rehti hain — page se aana-jaana pe bhi nahi udenge
+    if 'att_images_cache' not in st.session_state:
+        st.session_state['att_images_cache'] = []      # list of (source, name, img_arr)
+    if 'att_seen_keys' not in st.session_state:
+        st.session_state['att_seen_keys'] = set()       # dedup tracker
+
     uploaded_files = st.file_uploader(
         "Class ki photos yahan daalo",
         type=["jpg", "jpeg", "png", "webp"],
         accept_multiple_files=True,
+        key="att_file_uploader",
     )
 
-    use_camera = st.checkbox("📷 Camera se lo")
+    use_camera = st.checkbox("📷 Camera se lo", key="att_use_camera")
     camera_photo = None
     if use_camera:
-        camera_photo = st.camera_input("Class photo lo")
+        camera_photo = st.camera_input("Class photo lo", key="att_camera_input")
 
-    # collect images
-    images_to_process = []
+    # naye files ko cache mein daalo (dedup: file_id/name+size se, taaki dobara add na ho)
     if uploaded_files:
         for f in uploaded_files:
-            images_to_process.append(('upload', f.name, np.array(Image.open(f).convert("RGB"))))
+            dedup_key = f"upload_{f.name}_{f.size}"
+            if dedup_key not in st.session_state['att_seen_keys']:
+                st.session_state['att_seen_keys'].add(dedup_key)
+                st.session_state['att_images_cache'].append(('upload', f.name, np.array(Image.open(f).convert("RGB"))))
     if camera_photo:
-        images_to_process.append(('camera', 'Camera Photo', np.array(Image.open(camera_photo).convert("RGB"))))
+        dedup_key = f"camera_{camera_photo.file_id if hasattr(camera_photo, 'file_id') else len(camera_photo.getvalue())}"
+        if dedup_key not in st.session_state['att_seen_keys']:
+            st.session_state['att_seen_keys'].add(dedup_key)
+            cam_name = f"Camera Photo {len([n for (_, n, _) in st.session_state['att_images_cache'] if n.startswith('Camera Photo')]) + 1}"
+            st.session_state['att_images_cache'].append(('camera', cam_name, np.array(Image.open(camera_photo).convert("RGB"))))
+
+    images_to_process = st.session_state['att_images_cache']
 
     if images_to_process:
-        st.markdown(f"**✅ {len(images_to_process)} photo(s) ready**")
+        top1, top2 = st.columns([4, 1])
+        with top1:
+            st.markdown(f"**✅ {len(images_to_process)} photo(s) ready**")
+        with top2:
+            if st.button("🗑️ Sab Hatao", use_container_width=True):
+                st.session_state['att_images_cache'] = []
+                st.session_state['att_seen_keys'] = set()
+                st.rerun()
 
         thumb_cols = st.columns(min(len(images_to_process), 5))
         for i, (_, name, img_arr) in enumerate(images_to_process):
@@ -499,10 +524,14 @@ def attendance_page():
                     'lecture_number': prev['lecture_number'],
                 }
                 st.session_state.pop('att_preview', None)
+                st.session_state.pop('att_images_cache', None)
+                st.session_state.pop('att_seen_keys', None)
                 st.rerun()
         with cbtn2:
             if st.button("🔄 Cancel / Dobara Photo Lo", type="secondary", use_container_width=True):
                 st.session_state.pop('att_preview', None)
+                st.session_state.pop('att_images_cache', None)
+                st.session_state.pop('att_seen_keys', None)
                 st.rerun()
 
     # ── Results (final, saved) ──
